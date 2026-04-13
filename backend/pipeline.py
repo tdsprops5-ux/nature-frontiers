@@ -12,8 +12,13 @@ from loguru import logger
 import numpy as np
 from PIL import Image
 
-from .config import settings
-from .utils import enhance_prompt, apply_color_grading
+# Handle both relative and absolute imports
+try:
+    from .config import settings
+    from .utils import enhance_prompt, apply_color_grading
+except ImportError:
+    from config import settings
+    from utils import enhance_prompt, apply_color_grading
 
 
 class VideoGenerationPipeline:

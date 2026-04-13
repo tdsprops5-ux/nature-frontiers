@@ -9,7 +9,11 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from loguru import logger
 
-from .config import settings
+# Handle both relative and absolute imports
+try:
+    from .config import settings
+except ImportError:
+    from config import settings
 
 
 class AudioGenerator:
