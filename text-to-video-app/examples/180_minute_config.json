@@ -1,0 +1,15 @@
+{
+  "prompt": "Epic journey through diverse ocean ecosystems, from sunlit surface waters to the mysterious abyssal depths, featuring diverse marine life including whales, sharks, jellyfish, coral reefs, and bioluminescent creatures",
+  "style": "ocean",
+  "duration_minutes": 180,
+  "resolution": "1280x720",
+  "fps": 30,
+  "target_fps": 60,
+  "clip_duration": 8,
+  "enable_audio": true,
+  "audio_type": "ambient",
+  "quality": "medium",
+  "transition_type": "crossfade",
+  "seed": 42,
+  "batch_id": "ocean_epic_180min_001"
+}
