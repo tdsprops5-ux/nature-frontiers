@@ -446,8 +446,7 @@ with gr.Blocks(title=settings.APP_NAME, theme=gr.themes.Base()) as demo:
             # Action buttons
             with gr.Row():
                 refresh_btn = gr.Button("🔄 Refresh Gallery", variant="secondary")
-                download_btn = gr.File(label="📥 Download Video", interactive=True)
-                delete_btn = gr.Button("🗑️ Delete Video", variant="stop")
+                delete_btn = gr.Button("🗑️ Delete Selected Video", variant="stop")
             
             # Status message
             gallery_status = gr.Textbox(label="Status", interactive=False)
@@ -466,36 +465,57 @@ with gr.Blocks(title=settings.APP_NAME, theme=gr.themes.Base()) as demo:
                         return str(meta['path']), f"Selected: {meta['name']}\nSize: {meta['size_mb']} MB\nCreated: {meta['created']}\n\nMetadata:\n{json.dumps(meta.get('metadata', {}), indent=2)}"
                 return "", "No video selected"
             
-            # Auto-update when gallery selection changes (using hidden state)
+            # Gallery selection handler - properly captures the event
+            def on_gallery_select(evt: gr.SelectData):
+                """Handle gallery selection event."""
+                if evt and hasattr(evt, 'value') and evt.value:
+                    return select_video(evt.value)
+                return "", "No video selected"
+            
             video_gallery.select(
-                fn=lambda evt: select_video(evt.value if hasattr(evt, 'value') else None),
+                fn=on_gallery_select,
                 inputs=None,
                 outputs=[selected_video_path, video_info_text]
             )
             
-            # Download button - create downloadable file
-            def prepare_download(video_path):
-                if video_path and Path(video_path).exists():
-                    return video_path
-                return None
+            # Download button - create downloadable file component
+            download_file = gr.File(
+                label="📥 Click to Download Selected Video",
+                interactive=False,
+                visible=True
+            )
             
-            download_btn.change(
-                fn=prepare_download,
+            # Prepare download when video is selected
+            def update_download_link(video_path):
+                """Update download link when video is selected."""
+                if video_path and Path(video_path).exists():
+                    return gr.File(value=video_path, interactive=True, visible=True)
+                return gr.File(interactive=False, visible=False)
+            
+            # Update download link when selection changes
+            selected_video_path.change(
+                fn=update_download_link,
                 inputs=[selected_video_path],
-                outputs=[download_btn]
+                outputs=[download_file]
             )
             
             # Delete button
             delete_btn.click(
                 fn=delete_video_ui,
                 inputs=[selected_video_path],
-                outputs=[gallery_status, video_gallery]
+                outputs=[gallery_status, video_gallery, video_info_text]
             )
             
-            # Auto-load videos on tab click
+            # Auto-load videos on tab click and page load
             demo.load(
                 fn=list_videos_ui,
                 outputs=[video_gallery, video_info_text]
+            )
+            
+            # Also refresh when entering the tab
+            refresh_btn.click(
+                fn=list_videos_ui,
+                outputs=[video_gallery, video_info_text, gallery_status]
             )
         
         # Tab 3: Workflow & Logs
@@ -522,27 +542,44 @@ with gr.Blocks(title=settings.APP_NAME, theme=gr.themes.Base()) as demo:
                 value="Application started successfully.\nWaiting for user input..."
             )
             
-            # Refresh logs button
-            refresh_logs_btn = gr.Button("🔄 Refresh Logs", variant="secondary")
+            # Refresh logs button and workflow status updater
+            refresh_logs_btn = gr.Button("🔄 Refresh Logs & Workflow Status", variant="secondary")
             
-            def get_recent_logs():
-                """Get recent log entries."""
+            def get_workflow_and_logs():
+                """Get recent log entries and workflow status."""
+                # Get logs
                 log_file = settings.LOG_OUTPUT_DIR / "app.log"
+                log_text = "No log file found yet. Logs will appear here after generating videos."
+                
                 if log_file.exists():
                     try:
                         with open(log_file, 'r') as f:
                             lines = f.readlines()
-                            # Get last 50 lines
                             recent = lines[-50:] if len(lines) > 50 else lines
-                            return ''.join(recent)
+                            log_text = ''.join(recent)
                     except Exception as e:
-                        return f"Error reading log file: {e}"
-                return "No log file found yet. Logs will appear here after generating videos."
+                        log_text = f"Error reading log file: {e}"
+                
+                # Get workflow status
+                video_count = len(get_generated_videos())
+                workflow_text = f"""✅ System Ready
+• Generated Videos: {video_count}
+• Storage Location: {settings.VIDEO_OUTPUT_DIR}
+• Device: {settings.device}
+• Status: Ready to generate new videos
+
+Recent Activity:
+{log_text[:200]}...""" if video_count >= 0 else f"⚠️ Error checking video directory"
+                
+                return log_text, workflow_text
             
             refresh_logs_btn.click(
-                fn=get_recent_logs,
-                outputs=[log_output]
+                fn=get_workflow_and_logs,
+                outputs=[log_output, workflow_status]
             )
+            
+            # Auto-load logs when tab is opened (will be called via demo.load)
+            # Removed duplicate refresh_logs_btn.click - already defined above
     
     # Footer
     gr.Markdown(f"""
