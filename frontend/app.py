@@ -10,9 +10,11 @@ from datetime import datetime
 import gradio as gr
 from loguru import logger
 
-# Add backend to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+# Add backend to path and ensure it's treated as a package
+backend_path = Path(__file__).parent.parent / "backend"
+sys.path.insert(0, str(backend_path))
 
+# Import backend modules (now works with proper __init__.py)
 from config import settings
 from utils import list_presets, get_preset_info, enhance_prompt
 from pipeline import pipeline
